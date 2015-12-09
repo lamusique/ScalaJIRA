@@ -1,4 +1,4 @@
-name := "ScalaPM"
+name := "ScalaJIRA"
 
 version := "1.0"
 
