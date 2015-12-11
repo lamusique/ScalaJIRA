@@ -11,7 +11,7 @@ import sun.awt.AWTAccessor.ComponentAccessor
 import scala.collection.JavaConverters._
 
 /**
-  * Created by username on 2015/12/02.
+  * Created by lamusique on 2015/12/02.
   */
 object LinkRetriever {
 
@@ -45,16 +45,10 @@ object LinkRetriever {
       val epic2StoryQuery = s"""project=$project AND "Epic Link" = "$epicName""""
       println(epic2StoryQuery)
       val epic2StoryPromise = client.getSearchClient().searchJql(epic2StoryQuery, MAX_RESULTS, null, null)
-      // This makes Stream.
-      //val stories = epic2StoryPromise.claim().getIssues.asScala.toSeq
       val stories = epic2StoryPromise.claim().getIssues.asScala.toIndexedSeq
       println("Epic: " + epic.getKey + " Stories:" + stories.map(_.getKey).mkString(","))
       epic -> stories
     })
-    //println("epic2StoryMapping.size=" + epic2StoryMapping.size)
-
-//    val issueManager = com.atlassian.jira.component.ComponentAccessor.getIssueManager();
-//    val issueLinkManager = com.atlassian.jira.component.ComponentAccessor.getIssueLinkManager();
 
     println("epic2StoryMapping.size=" + epic2StoryMapping.size)
 

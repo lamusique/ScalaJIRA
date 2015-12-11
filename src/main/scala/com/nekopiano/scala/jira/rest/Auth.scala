@@ -9,7 +9,7 @@ import org.joda.time.format._
 import scala.collection.JavaConverters._
 
 /**
-  * Created by username on 2015/12/02.
+  * Created by lamusique on 2015/12/02.
   */
 object Auth {
 
