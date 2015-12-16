@@ -19,6 +19,8 @@ libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "2.6.0"
 
 libraryDependencies += "com.typesafe" % "config" % "1.3.0"
 
+libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4"
+
 
 //resolvers += "atlassian-public" at "https://m2proxy.atlassian.com/repository/public"
 resolvers += "spring-milestones" at "http://repo.spring.io/libs-milestone/"

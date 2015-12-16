@@ -1,17 +1,19 @@
 package com.nekopiano.scala.jira.rest
 
+import java.io.File
 import java.net.URI
 
+import com.atlassian.jira.rest.client.api.domain.IssueField
 import com.atlassian.jira.rest.client.api.domain.IssueLinkType.Direction
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory
+import com.github.tototoshi.csv.CSVWriter
 import org.joda.time.DateTime
-import org.joda.time.format._
-import sun.awt.AWTAccessor.ComponentAccessor
 
 import scala.collection.JavaConverters._
+import scala.util.parsing.json.JSON
 
 /**
-  * Created by lamusique on 2015/12/02.
+  * Created on 2015/12/02.
   */
 object LinkRetriever {
 
@@ -20,6 +22,9 @@ object LinkRetriever {
   val MAX_RESULTS = 1000
 
   def main(args: Array[String]) {
+
+    val startTime = DateTime.now
+
     val restClientFactory = new AsynchronousJiraRestClientFactory()
     // http://host:port/context/rest/api-name/api-version/resource-name
 
@@ -52,29 +57,85 @@ object LinkRetriever {
 
     println("epic2StoryMapping.size=" + epic2StoryMapping.size)
 
-    epic2StoryMapping.map(epic2Stories => {
-      val epicInfo = "Epic Name = " + epic2Stories._1.getFieldByName("Epic Name")
-      println(epicInfo)
-      println("epic2Stories._2.size=" + epic2Stories._2.size)
-      val blockingStories = epic2Stories._2.map(story => {
-        println("    story=" + story.getKey)
-          val links = story.getIssueLinks.asScala.map(link => {
+    val wholeStories = epic2StoryMapping.map(epic2Stories => {
+      val epic = epic2Stories._1
+      println("Epic (" + epic.getFieldByName("Epic Name") + ") started to retrieve.")
+      val stories = epic2Stories._2.map(story => {
+          val linkedStories = story.getIssueLinks.asScala.map(link => {
             val linkType = link.getIssueLinkType
             if (linkType.getDirection == Direction.INBOUND && linkType.getName == "Blocks" ) {
-              val blockingStory = client.getIssueClient.getIssue(link.getTargetIssueKey)
-              story.getKey + story.getSummary + link.getIssueLinkType.toString + link.getTargetIssueKey
-            } else {""}
-          }).mkString(",")
-        println("    links="+links)
+              Option(client.getIssueClient.getIssue(link.getTargetIssueKey).claim())
+            } else {None}
+          }).toIndexedSeq
+         story -> linkedStories
       })
+      epic -> stories
+    }).toIndexedSeq
+
+    val lines = wholeStories.map(epic2Stories=>{
+      val epic = epic2Stories._1
+      epic2Stories._2.map(story2Substories => {
+        val story = story2Substories._1
+        story2Substories._2.map(optionalSubstory =>{
+          optionalSubstory match {
+            case Some(substory) => List(substory.getKey, "3", epic.getKey, extractFieldValue(epic.getFieldByName("Epic Name")), epic.getSummary, story.getKey, story.getSummary, extractFieldValue(story.getFieldByName("Story Points")), substory.getKey, substory.getSummary, extractFieldValue(substory.getFieldByName("Story Points")), extractFieldJsonValue(substory.getFieldByName("Custom Field A")), extractFieldJsonValue(substory.getFieldByName("Custom Field B")), extractFieldJsonValue(substory.getFieldByName("Custom Field C")))
+            case None => List(story.getKey, "2", epic.getKey, extractFieldValue(epic.getFieldByName("Epic Name")), epic.getSummary, story.getKey, story.getSummary, extractFieldValue(story.getFieldByName("Story Points")))
+          }
+        })
+      }) flatten
+    }) flatten
+
+    println("lines.size=" + lines.size)
+
+    val filteredLines = lines.filter(line =>{
+      if(line(2) == "2") {
+        lines.find(anotherline => {anotherline(0) == line(0)}).isEmpty
+      } else {
+        true
+      }
     })
+    println("filteredLines.size=" + filteredLines.size)
 
+    val csvFile = new File("substories.csv")
+    val writer = CSVWriter.open(csvFile)
 
+    val header = List("primary key","hierarchy level","epic.getKey", """epic.getFieldByName("Epic Name")""", "epic.getSummary", "story.getKey", "story.getSummary", """story.getFieldByName("Story Points")""", "substory.getKey", "substory.getSummary", """substory.getFieldByName("Story Points")""", """substory.getFieldByName("Custom Field A")""", """substory.getFieldByName("Custom Field B")""", """substory.getFieldByName("Custom Field C")""")
+    writer.writeAll(header :: filteredLines.toList)
+    writer.close()
 
     // Done
-    println("Finished.");
-    System.exit(0);
+    println("Finished. elapsed time = " + (DateTime.now.getMillis - startTime.getMillis) + " ms")
+    System.exit(0)
 
   }
+
+  def extractFieldValue(field:IssueField) = {
+    Option(field) match {
+      case Some(field) => {
+        Option(field.getValue) match {
+          case Some(value) => value.toString
+          case None => ""
+        }
+      }
+      case None => ""
+    }
+  }
+
+  def extractFieldJsonValue(field:IssueField) = {
+    Option(field) match {
+      case Some(field) => {
+        Option(field.getValue) match {
+          case Some(value) => extractJsonValue(value.toString)
+          case None => ""
+        }
+      }
+      case None => ""
+    }
+  }
+
+  def extractJsonValue(jsonString :String) = {
+    JSON.parseFull(jsonString).get.asInstanceOf[Map[String, String]]("value")
+  }
+
 
 }
