@@ -31,7 +31,7 @@ object LinkRetriever {
     import com.typesafe.config.ConfigFactory
     val conf = ConfigFactory.load("account.conf")
 
-    //val JIRA_BASE_URL = "http://teamname.atlassian.net/plugins/servlet/oauth/request-token"
+    //val JIRA_BASE_URL = "http://[team name].atlassian.net/plugins/servlet/oauth/request-token"
     val jiraBaseURL = conf.getString("baseurl")
 
     // JIRA_BASE_URL + "/plugins/servlet/oauth/request-token"
