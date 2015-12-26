@@ -31,7 +31,7 @@ object Auth {
     val client = restClientFactory.createWithBasicHttpAuthentication(uri, username, password)
 
     // Invoke the JRJC Client
-    val promise = client.getUserClient().getUser("admin")
+    val promise = client.getUserClient().getUser(username)
     val user = promise.claim()
 
 
